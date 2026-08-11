@@ -1,12 +1,11 @@
 ```
-# Binaries
-bin/
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
 
 # Dependencies
 vendor/
- glide.lock
- Gopkg.lock
- go.sum
 
 # Logs and temp files
 *.log
@@ -15,10 +14,5 @@ vendor/
 # Environment
 .env
 .env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-*.swp
+.env.*
 ```
