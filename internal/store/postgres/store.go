@@ -425,3 +425,116 @@ func (s *Store) DeleteExpenseRule(ctx context.Context, userID int64, id int64) e
 	}
 	return nil
 }
+
+type SavingsAccount struct {
+	ID        int64  `json:"id"`
+	UserID    int64  `json:"user_id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func (s *Store) CreateSavingsAccount(ctx context.Context, userID int64, name string) (*SavingsAccount, error) {
+	query := `
+		INSERT INTO savings_accounts (user_id, name, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
+		RETURNING id, user_id, name, created_at, updated_at
+	`
+	account := &SavingsAccount{}
+	err := s.db.QueryRowContext(ctx, query, userID, name).Scan(
+		&account.ID, &account.UserID, &account.Name, &account.CreatedAt, &account.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (s *Store) GetSavingsAccounts(ctx context.Context, userID int64) ([]*SavingsAccount, error) {
+	query := `
+		SELECT id, user_id, name, created_at, updated_at
+		FROM savings_accounts
+		WHERE user_id = $1
+	`
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []*SavingsAccount
+	for rows.Next() {
+		account := &SavingsAccount{}
+		err := rows.Scan(
+			&account.ID, &account.UserID, &account.Name, &account.CreatedAt, &account.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return accounts, nil
+}
+
+func (s *Store) GetSavingsAccountByID(ctx context.Context, userID int64, id int64) (*SavingsAccount, error) {
+	query := `
+		SELECT id, user_id, name, created_at, updated_at
+		FROM savings_accounts
+		WHERE id = $1 AND user_id = $2
+	`
+	account := &SavingsAccount{}
+	err := s.db.QueryRowContext(ctx, query, id, userID).Scan(
+		&account.ID, &account.UserID, &account.Name, &account.CreatedAt, &account.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (s *Store) UpdateSavingsAccount(ctx context.Context, userID int64, id int64, name string) (*SavingsAccount, error) {
+	query := `
+		UPDATE savings_accounts
+		SET name = $3, updated_at = NOW()
+		WHERE id = $1 AND user_id = $2
+		RETURNING id, user_id, name, created_at, updated_at
+	`
+	account := &SavingsAccount{}
+	err := s.db.QueryRowContext(ctx, query, id, userID, name).Scan(
+		&account.ID, &account.UserID, &account.Name, &account.CreatedAt, &account.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (s *Store) DeleteSavingsAccount(ctx context.Context, userID int64, id int64) error {
+	query := `
+		DELETE FROM savings_accounts
+		WHERE id = $1 AND user_id = $2
+	`
+	result, err := s.db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
