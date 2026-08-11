@@ -28,6 +28,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(store, cfg.JWTSecret)
 	settingsHandler := handlers.NewSettingsHandler(store)
 	balancesHandler := handlers.NewBalancesHandler()
+	incomeRuleHandler := handlers.NewIncomeRuleHandler(store)
 
 	// Public routes
 	router.GET("/api/health", handlers.HealthzHandler)
@@ -42,6 +43,13 @@ func main() {
 		auth.GET("/auth/me", authHandler.Me)
 		auth.GET("/balances", balancesHandler.GetBalances)
 		auth.PATCH("/me/settings", settingsHandler.UpdateSettings)
+		
+		// Income rules routes
+		auth.GET("/income-rules", incomeRuleHandler.ListIncomeRules)
+		auth.POST("/income-rules", incomeRuleHandler.CreateIncomeRule)
+		auth.GET("/income-rules/:id", incomeRuleHandler.GetIncomeRule)
+		auth.PUT("/income-rules/:id", incomeRuleHandler.UpdateIncomeRule)
+		auth.DELETE("/income-rules/:id", incomeRuleHandler.DeleteIncomeRule)
 	}
 
 	addr := ":" + cfg.Port
