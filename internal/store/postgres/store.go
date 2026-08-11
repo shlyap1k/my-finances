@@ -293,3 +293,135 @@ func (s *Store) DeleteIncomeRule(ctx context.Context, userID int64, id int64) er
 	}
 	return nil
 }
+
+type ExpenseRule struct {
+	ID          int64   `json:"id"`
+	UserID      int64   `json:"user_id"`
+	Name        string  `json:"name"`
+	AmountMinor int64   `json:"amount_minor"`
+	MonthlyDay  int     `json:"monthly_day"`
+	StartDate   string  `json:"start_date"`
+	EndDate     *string `json:"end_date,omitempty"`
+	Active      bool    `json:"active"`
+	Note        *string `json:"note,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+}
+
+func (s *Store) CreateExpenseRule(ctx context.Context, userID int64, name string, amountMinor int64, monthlyDay int, startDate string, endDate *string, active bool, note *string) (*ExpenseRule, error) {
+	query := `
+		INSERT INTO expense_rules (user_id, name, amount_minor, monthly_day, start_date, end_date, active, note, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+		RETURNING id, user_id, name, amount_minor, monthly_day, start_date, end_date, active, note, created_at, updated_at
+	`
+	rule := &ExpenseRule{}
+	err := s.db.QueryRowContext(ctx, query, userID, name, amountMinor, monthlyDay, startDate, endDate, active, note).Scan(
+		&rule.ID, &rule.UserID, &rule.Name, &rule.AmountMinor, &rule.MonthlyDay,
+		&rule.StartDate, &rule.EndDate, &rule.Active, &rule.Note, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) GetExpenseRules(ctx context.Context, userID int64, active *bool) ([]*ExpenseRule, error) {
+	query := `
+		SELECT id, user_id, name, amount_minor, monthly_day, start_date, end_date, active, note, created_at, updated_at
+		FROM expense_rules
+		WHERE user_id = $1
+	`
+	args := []interface{}{userID}
+	argIndex := 2
+	
+	if active != nil {
+		query += " AND active = $" + fmt.Sprint(argIndex)
+		args = append(args, *active)
+		argIndex++
+	}
+	
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var rules []*ExpenseRule
+	for rows.Next() {
+		rule := &ExpenseRule{}
+		err := rows.Scan(
+			&rule.ID, &rule.UserID, &rule.Name, &rule.AmountMinor, &rule.MonthlyDay,
+			&rule.StartDate, &rule.EndDate, &rule.Active, &rule.Note, &rule.CreatedAt, &rule.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return rules, nil
+}
+
+func (s *Store) GetExpenseRuleByID(ctx context.Context, userID int64, id int64) (*ExpenseRule, error) {
+	query := `
+		SELECT id, user_id, name, amount_minor, monthly_day, start_date, end_date, active, note, created_at, updated_at
+		FROM expense_rules
+		WHERE id = $1 AND user_id = $2
+	`
+	rule := &ExpenseRule{}
+	err := s.db.QueryRowContext(ctx, query, id, userID).Scan(
+		&rule.ID, &rule.UserID, &rule.Name, &rule.AmountMinor, &rule.MonthlyDay,
+		&rule.StartDate, &rule.EndDate, &rule.Active, &rule.Note, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) UpdateExpenseRule(ctx context.Context, userID int64, id int64, name string, amountMinor int64, monthlyDay int, startDate string, endDate *string, active bool, note *string) (*ExpenseRule, error) {
+	query := `
+		UPDATE expense_rules
+		SET name = $3, amount_minor = $4, monthly_day = $5, start_date = $6, end_date = $7, active = $8, note = $9, updated_at = NOW()
+		WHERE id = $1 AND user_id = $2
+		RETURNING id, user_id, name, amount_minor, monthly_day, start_date, end_date, active, note, created_at, updated_at
+	`
+	rule := &ExpenseRule{}
+	err := s.db.QueryRowContext(ctx, query, id, userID, name, amountMinor, monthlyDay, startDate, endDate, active, note).Scan(
+		&rule.ID, &rule.UserID, &rule.Name, &rule.AmountMinor, &rule.MonthlyDay,
+		&rule.StartDate, &rule.EndDate, &rule.Active, &rule.Note, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) DeleteExpenseRule(ctx context.Context, userID int64, id int64) error {
+	query := `
+		DELETE FROM expense_rules
+		WHERE id = $1 AND user_id = $2
+	`
+	result, err := s.db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
