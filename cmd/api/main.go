@@ -32,6 +32,7 @@ func main() {
 	incomeRuleHandler := handlers.NewIncomeRuleHandler(store)
 	expenseRuleHandler := handlers.NewExpenseRuleHandler(store)
 	savingsAccountHandler := handlers.NewSavingsAccountHandler(store)
+	savingsRuleHandler := handlers.NewSavingsRuleHandler(store)
 
 	// Public routes
 	router.GET("/api/health", handlers.HealthzHandler)
@@ -67,6 +68,13 @@ func main() {
 		auth.GET("/savings-accounts/:id", savingsAccountHandler.GetSavingsAccount)
 		auth.PUT("/savings-accounts/:id", savingsAccountHandler.UpdateSavingsAccount)
 		auth.DELETE("/savings-accounts/:id", savingsAccountHandler.DeleteSavingsAccount)
+
+		// Savings rules routes
+		auth.GET("/savings-rules", savingsRuleHandler.ListSavingsRules)
+		auth.POST("/savings-rules", savingsRuleHandler.CreateSavingsRule)
+		auth.GET("/savings-rules/:id", savingsRuleHandler.GetSavingsRule)
+		auth.PUT("/savings-rules/:id", savingsRuleHandler.UpdateSavingsRule)
+		auth.DELETE("/savings-rules/:id", savingsRuleHandler.DeleteSavingsRule)
 	}
 
 	addr := ":" + cfg.Port

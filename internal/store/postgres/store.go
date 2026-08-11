@@ -538,3 +538,126 @@ func (s *Store) DeleteSavingsAccount(ctx context.Context, userID int64, id int64
 	}
 	return nil
 }
+
+type SavingsRule struct {
+	ID             int64   `json:"id"`
+	UserID         int64   `json:"user_id"`
+	IncomeRuleID   *int64  `json:"income_rule_id,omitempty"`
+	SavingsAccountID int64 `json:"savings_account_id"`
+	RuleType       string  `json:"rule_type"` // "percent" или "fixed"
+	PercentBps     *int32  `json:"percent_bps,omitempty"` // basis points: 1% = 100, 100% = 10000
+	FixedAmountMinor *int64 `json:"fixed_amount_minor,omitempty"`
+	Priority       int     `json:"priority"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
+}
+
+func (s *Store) CreateSavingsRule(ctx context.Context, userID int64, incomeRuleID *int64, savingsAccountID int64, ruleType string, percentBps *int32, fixedAmountMinor *int64, priority int) (*SavingsRule, error) {
+	query := `
+		INSERT INTO savings_rules (user_id, income_rule_id, savings_account_id, rule_type, percent_bps, fixed_amount_minor, priority, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+		RETURNING id, user_id, income_rule_id, savings_account_id, rule_type, percent_bps, fixed_amount_minor, priority, created_at, updated_at
+	`
+	rule := &SavingsRule{}
+	err := s.db.QueryRowContext(ctx, query, userID, incomeRuleID, savingsAccountID, ruleType, percentBps, fixedAmountMinor, priority).Scan(
+		&rule.ID, &rule.UserID, &rule.IncomeRuleID, &rule.SavingsAccountID, &rule.RuleType,
+		&rule.PercentBps, &rule.FixedAmountMinor, &rule.Priority, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) GetSavingsRules(ctx context.Context, userID int64) ([]*SavingsRule, error) {
+	query := `
+		SELECT id, user_id, income_rule_id, savings_account_id, rule_type, percent_bps, fixed_amount_minor, priority, created_at, updated_at
+		FROM savings_rules
+		WHERE user_id = $1
+		ORDER BY priority ASC
+	`
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rules []*SavingsRule
+	for rows.Next() {
+		rule := &SavingsRule{}
+		err := rows.Scan(
+			&rule.ID, &rule.UserID, &rule.IncomeRuleID, &rule.SavingsAccountID, &rule.RuleType,
+			&rule.PercentBps, &rule.FixedAmountMinor, &rule.Priority, &rule.CreatedAt, &rule.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return rules, nil
+}
+
+func (s *Store) GetSavingsRuleByID(ctx context.Context, userID int64, id int64) (*SavingsRule, error) {
+	query := `
+		SELECT id, user_id, income_rule_id, savings_account_id, rule_type, percent_bps, fixed_amount_minor, priority, created_at, updated_at
+		FROM savings_rules
+		WHERE id = $1 AND user_id = $2
+	`
+	rule := &SavingsRule{}
+	err := s.db.QueryRowContext(ctx, query, id, userID).Scan(
+		&rule.ID, &rule.UserID, &rule.IncomeRuleID, &rule.SavingsAccountID, &rule.RuleType,
+		&rule.PercentBps, &rule.FixedAmountMinor, &rule.Priority, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) UpdateSavingsRule(ctx context.Context, userID int64, id int64, incomeRuleID *int64, savingsAccountID int64, ruleType string, percentBps *int32, fixedAmountMinor *int64, priority int) (*SavingsRule, error) {
+	query := `
+		UPDATE savings_rules
+		SET income_rule_id = $3, savings_account_id = $4, rule_type = $5, percent_bps = $6, fixed_amount_minor = $7, priority = $8, updated_at = NOW()
+		WHERE id = $1 AND user_id = $2
+		RETURNING id, user_id, income_rule_id, savings_account_id, rule_type, percent_bps, fixed_amount_minor, priority, created_at, updated_at
+	`
+	rule := &SavingsRule{}
+	err := s.db.QueryRowContext(ctx, query, id, userID, incomeRuleID, savingsAccountID, ruleType, percentBps, fixedAmountMinor, priority).Scan(
+		&rule.ID, &rule.UserID, &rule.IncomeRuleID, &rule.SavingsAccountID, &rule.RuleType,
+		&rule.PercentBps, &rule.FixedAmountMinor, &rule.Priority, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
+
+func (s *Store) DeleteSavingsRule(ctx context.Context, userID int64, id int64) error {
+	query := `
+		DELETE FROM savings_rules
+		WHERE id = $1 AND user_id = $2
+	`
+	result, err := s.db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
