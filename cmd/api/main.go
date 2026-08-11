@@ -16,6 +16,7 @@ func main() {
 	cfg := config.Load()
 
 	store, err := postgres.NewStore(cfg.DatabaseURL)
+	fmt.Println(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

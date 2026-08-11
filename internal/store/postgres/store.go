@@ -42,10 +42,10 @@ type User struct {
 }
 
 type UserSettings struct {
-	UserID              int64  `json:"user_id"`
-	Timezone            string `json:"timezone"`
-	AvgWindowDays       int    `json:"avg_window_days"`
-	DefaultIncludeAvg   bool   `json:"default_include_avg"`
+	UserID            int64  `json:"user_id"`
+	Timezone          string `json:"timezone"`
+	AvgWindowDays     int    `json:"avg_window_days"`
+	DefaultIncludeAvg bool   `json:"default_include_avg"`
 }
 
 func (s *Store) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
@@ -104,8 +104,8 @@ func (s *Store) GetUserByID(ctx context.Context, id int64) (*User, error) {
 
 func (s *Store) CreateUserSettings(ctx context.Context, userID int64) (*UserSettings, error) {
 	query := `
-		INSERT INTO user_settings (user_id, timezone, avg_window_days, default_include_avg)
-		VALUES ($1, 'UTC', 30, false)
+		INSERT INTO user_settings (user_id, timezone, avg_window_days, default_include_avg, created_at, updated_at)
+		VALUES ($1, 'UTC', 30, false, NOW(), NOW())
 		ON CONFLICT (user_id) DO UPDATE SET 
 			timezone = EXCLUDED.timezone,
 			avg_window_days = EXCLUDED.avg_window_days,
