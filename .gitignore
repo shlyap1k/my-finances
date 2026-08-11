@@ -1,13 +1,12 @@
 ```
-# Compiled and build artifacts
-server
-*.o
-*.obj
-*.out
+# Binaries
+bin/
 
 # Dependencies
-go.sum
 vendor/
+ glide.lock
+ Gopkg.lock
+ go.sum
 
 # Logs and temp files
 *.log
