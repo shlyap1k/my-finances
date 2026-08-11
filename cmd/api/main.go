@@ -30,6 +30,7 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(store)
 	balancesHandler := handlers.NewBalancesHandler()
 	incomeRuleHandler := handlers.NewIncomeRuleHandler(store)
+	expenseRuleHandler := handlers.NewExpenseRuleHandler(store)
 
 	// Public routes
 	router.GET("/api/health", handlers.HealthzHandler)
@@ -51,6 +52,13 @@ func main() {
 		auth.GET("/income-rules/:id", incomeRuleHandler.GetIncomeRule)
 		auth.PUT("/income-rules/:id", incomeRuleHandler.UpdateIncomeRule)
 		auth.DELETE("/income-rules/:id", incomeRuleHandler.DeleteIncomeRule)
+
+		// Expense rules routes
+		auth.GET("/expense-rules", expenseRuleHandler.ListExpenseRules)
+		auth.POST("/expense-rules", expenseRuleHandler.CreateExpenseRule)
+		auth.GET("/expense-rules/:id", expenseRuleHandler.GetExpenseRule)
+		auth.PUT("/expense-rules/:id", expenseRuleHandler.UpdateExpenseRule)
+		auth.DELETE("/expense-rules/:id", expenseRuleHandler.DeleteExpenseRule)
 	}
 
 	addr := ":" + cfg.Port
